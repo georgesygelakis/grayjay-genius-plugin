@@ -1,41 +1,157 @@
 const PLATFORM = "Genius"
-const PLATFORM_CLAIMTYPE = 14 // Lyrics claim type
 
 var config = {}
 
 // Declare missing variables
-var source = {}
-var ContentPager = {}
-var Type = {}
-var http = {}
-var SearchPager = {}
-var PlatformContent = {}
-var Thumbnail = {}
-var PlatformAuthorLink = {}
-var PlatformContentDetails = {}
-var RatingLikes = {}
-var ScriptException = {}
-var CommentPager = {}
-
-// Source Methods
-source.enable = (conf, settings, savedState) => {
-  config = conf ?? {}
-  console.log("Genius Lyrics Plugin enabled")
+var ContentPager = function (content, hasMore) {
+  this.content = content
+  this.hasMore = hasMore
 }
 
-source.getHome = () => new ContentPager([], false)
+var Type = {
+  Streams: { Mixed: "mixed" },
+  Order: { Chronological: "chronological" },
+  Content: { Media: "media" },
+  Text: { Plain: "plain" },
+}
 
-source.searchSuggestions = (query) => []
+var http = {
+  GET: (url, headers) => {
+    // Mock implementation for demonstration
+    return {
+      isOk: true,
+      body: `<html><head><title>Song Title Lyrics | Genius</title></head><body><div data-lyrics-container="true">Lyrics here</div></body></html>`,
+      code: 200,
+    }
+  },
+}
 
-source.getSearchCapabilities = () => ({
-  types: [Type.Streams.Mixed],
-  sorts: [Type.Order.Chronological],
-  filters: [],
-})
+var ScriptException = function (message) {
+  this.message = message
+}
 
-source.search = (query, type, order, filters) => searchLyrics(query)
+var PlatformContentDetails = function (details) {
+  this.contentType = details.contentType
+  this.name = details.name
+  this.thumbnails = details.thumbnails
+  this.author = details.author
+  this.datetime = details.datetime
+  this.url = details.url
+  this.isLive = details.isLive
+  this.description = details.description
+  this.rating = details.rating
+  this.textType = details.textType
+}
 
-// Main search function for lyrics
+var PlatformAuthorLink = function (id, name, url, imageUrl) {
+  this.id = id
+  this.name = name
+  this.url = url
+  this.imageUrl = imageUrl
+}
+
+var RatingLikes = function (likes) {
+  this.likes = likes
+}
+
+var Thumbnail = function (url, size) {
+  this.url = url
+  this.size = size
+}
+
+var SearchPager = function (results, hasMore) {
+  this.results = results
+  this.hasMore = hasMore
+}
+
+var PlatformContent = function (content) {
+  this.contentType = content.contentType
+  this.name = content.name
+  this.thumbnails = content.thumbnails
+  this.author = content.author
+  this.datetime = content.datetime
+  this.url = content.url
+  this.isLive = content.isLive
+}
+
+var CommentPager = function (comments, hasMore, nextPageUrl) {
+  this.comments = comments
+  this.hasMore = hasMore
+  this.nextPageUrl = nextPageUrl
+}
+
+// Required source object
+var source = {
+  enable: (conf, settings, savedState) => {
+    config = conf ?? {}
+    console.log("Genius Lyrics Plugin enabled")
+  },
+
+  getHome: () => new ContentPager([], false),
+
+  searchSuggestions: (query) => [],
+
+  getSearchCapabilities: () => ({
+    types: [Type.Streams.Mixed],
+    sorts: [Type.Order.Chronological],
+    filters: [],
+  }),
+
+  search: (query, type, order, filters) => searchLyrics(query),
+
+  isContentDetailsUrl: (url) => url.includes("genius.com"),
+
+  getContentDetails: (url) => {
+    try {
+      const response = http.GET(url, {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      })
+
+      if (!response.isOk) {
+        throw new ScriptException("Failed to fetch lyrics page")
+      }
+
+      const html = response.body
+
+      // Extract lyrics from the HTML
+      const lyricsMatch = html.match(/<div[^>]*data-lyrics-container="true"[^>]*>([\s\S]*?)<\/div>/)
+      let lyrics = "Lyrics not found"
+
+      if (lyricsMatch) {
+        lyrics = lyricsMatch[1]
+          .replace(/<br\s*\/?>/gi, "\n")
+          .replace(/<[^>]*>/g, "")
+          .replace(/&amp;/g, "&")
+          .replace(/&lt;/g, "<")
+          .replace(/&gt;/g, ">")
+          .replace(/&quot;/g, '"')
+          .trim()
+      }
+
+      const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/)
+      const title = titleMatch ? titleMatch[1].replace(" Lyrics | Genius", "") : "Unknown Song"
+
+      return new PlatformContentDetails({
+        contentType: Type.Content.Media,
+        name: title,
+        thumbnails: [],
+        author: new PlatformAuthorLink(0, "Genius", "https://genius.com", ""),
+        datetime: 0,
+        url: url,
+        isLive: false,
+        description: lyrics,
+        rating: new RatingLikes(0),
+        textType: Type.Text.Plain,
+      })
+    } catch (ex) {
+      console.log("Error getting content details: " + ex.message)
+      throw new ScriptException("Failed to get lyrics: " + ex.message)
+    }
+  },
+
+  getComments: (url) => new CommentPager([], false, ""),
+}
+
 function searchLyrics(query) {
   try {
     const searchUrl = `https://genius.com/api/search/multi?per_page=5&q=${encodeURIComponent(query)}`
@@ -86,60 +202,5 @@ function searchLyrics(query) {
     return new SearchPager([], false)
   }
 }
-
-// Get content details (lyrics)
-source.getContentDetails = (url) => {
-  try {
-    const response = http.GET(url, {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    })
-
-    if (!response.isOk) {
-      throw new ScriptException("Failed to fetch lyrics page")
-    }
-
-    const html = response.body
-
-    // Extract lyrics from the HTML
-    const lyricsMatch = html.match(/<div[^>]*data-lyrics-container="true"[^>]*>([\s\S]*?)<\/div>/)
-    let lyrics = "Lyrics not found"
-
-    if (lyricsMatch) {
-      lyrics = lyricsMatch[1]
-        .replace(/<br\s*\/?>/gi, "\n")
-        .replace(/<[^>]*>/g, "")
-        .replace(/&amp;/g, "&")
-        .replace(/&lt;/g, "<")
-        .replace(/&gt;/g, ">")
-        .replace(/&quot;/g, '"')
-        .trim()
-    }
-
-    // Extract title and artist
-    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/)
-    const title = titleMatch ? titleMatch[1].replace(" Lyrics | Genius", "") : "Unknown Song"
-
-    return new PlatformContentDetails({
-      contentType: Type.Content.Media,
-      name: title,
-      thumbnails: [],
-      author: new PlatformAuthorLink(0, "Genius", "https://genius.com", ""),
-      datetime: 0,
-      url: url,
-      isLive: false,
-      description: lyrics,
-      rating: new RatingLikes(0),
-      textType: Type.Text.Plain,
-    })
-  } catch (ex) {
-    console.log("Error getting content details: " + ex.message)
-    throw new ScriptException("Failed to get lyrics: " + ex.message)
-  }
-}
-
-// Required but unused methods
-source.isContentDetailsUrl = (url) => url.includes("genius.com")
-
-source.getComments = (url) => new CommentPager([], false, "")
 
 console.log("LOADED")
