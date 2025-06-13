@@ -175,15 +175,3 @@ function handleAction(action, context) {
   }
   return { error: "Unsupported action or missing context" }
 }
-
-const ContentPager = {}
-const Type = {}
-const http = {}
-const SearchPager = {}
-const PlatformContent = {}
-const Thumbnail = {}
-const PlatformAuthorLink = {}
-const PlatformContentDetails = {}
-const RatingLikes = {}
-const CommentPager = {}
-const ScriptException = {}
