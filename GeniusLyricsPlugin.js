@@ -1,6 +1,3 @@
-// Grayjay Plugin for Genius Lyrics
-// Don't declare 'source' - it's already provided by Grayjay
-
 function enable(conf, settings, savedState) {
   console.log("Genius Lyrics Plugin enabled")
 }
@@ -22,16 +19,13 @@ function getSearchCapabilities() {
 }
 
 function search(query, type, order, filters) {
-  console.log("Searching for: " + query)
   try {
     const searchUrl = `https://genius.com/api/search/multi?per_page=5&q=${encodeURIComponent(query)}`
-
     const response = http.GET(searchUrl, {
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
     })
 
     if (!response.isOk) {
-      console.log("Search failed with status: " + response.code)
       return new SearchPager([], false)
     }
 
@@ -68,7 +62,6 @@ function search(query, type, order, filters) {
 
     return new SearchPager(results, false)
   } catch (ex) {
-    console.log("Error searching lyrics: " + ex.message)
     return new SearchPager([], false)
   }
 }
@@ -78,7 +71,6 @@ function isContentDetailsUrl(url) {
 }
 
 function getContentDetails(url) {
-  console.log("Getting content details for: " + url)
   try {
     const response = http.GET(url, {
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -89,8 +81,6 @@ function getContentDetails(url) {
     }
 
     const html = response.body
-
-    // Extract lyrics from the HTML
     const lyricsMatch = html.match(/<div[^>]*data-lyrics-container="true"[^>]*>([\s\S]*?)<\/div>/)
     let lyrics = "Lyrics not found"
 
@@ -121,7 +111,6 @@ function getContentDetails(url) {
       textType: Type.Text.Plain,
     })
   } catch (ex) {
-    console.log("Error getting content details: " + ex.message)
     throw new ScriptException("Failed to get lyrics: " + ex.message)
   }
 }
@@ -129,5 +118,3 @@ function getContentDetails(url) {
 function getComments(url) {
   return new CommentPager([], false, "")
 }
-
-console.log("Genius Lyrics Plugin loaded")
