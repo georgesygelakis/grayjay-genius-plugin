@@ -1,7 +1,16 @@
 {
   "name": "Genius Lyrics",
-  "version": "1.0",
-  "sourceUrl": "https://georgesygelakis.github.io/grayjay-genius-plugin/plugin.json",
-  "scriptUrl": "https://georgesygelakis.github.io/grayjay-genius-plugin/GeniusLyricsPlugin.js",
-  "icon": "https://i.pinimg.com/originals/48/a0/9f/48a09fb46e00022a692e459b917a2848.jpg"
+  "description": "Fetch lyrics from Genius.com",
+  "author": "georgesygelakis",
+  "authorUrl": "https://github.com/georgesygelakis",
+  "platformUrl": "https://genius.com",
+  "version": 1,
+  "iconUrl": "https://i.pinimg.com/originals/48/a0/9f/48a09fb46e00022a692e459b917a2848.jpg",
+  "id": "genius-lyrics",
+  "scriptUrl": "./GeniusLyricsPlugin.js",
+  "packages": ["Http"],
+  "allowEval": false,
+  "allowUrls": ["https://genius.com/*", "https://api.genius.com/*"],
+  "constants": {},
+  "settings": []
 }
