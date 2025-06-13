@@ -18,6 +18,79 @@ function getSearchCapabilities() {
   }
 }
 
+// Main function to get lyrics for current playing song
+function getLyrics(songTitle, artistName) {
+  try {
+    const query = `${songTitle} ${artistName}`
+    console.log("Getting lyrics for: " + query)
+
+    const searchUrl = `https://genius.com/api/search/multi?per_page=1&q=${encodeURIComponent(query)}`
+    const response = http.GET(searchUrl, {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    })
+
+    if (!response.isOk) {
+      return { error: "Failed to search for lyrics" }
+    }
+
+    const data = JSON.parse(response.body)
+
+    if (data.response && data.response.sections) {
+      for (const section of data.response.sections) {
+        if (section.type === "song" && section.hits && section.hits.length > 0) {
+          const song = section.hits[0].result
+          if (song && song.url) {
+            return getLyricsFromUrl(song.url)
+          }
+        }
+      }
+    }
+
+    return { error: "No lyrics found" }
+  } catch (ex) {
+    return { error: "Error fetching lyrics: " + ex.message }
+  }
+}
+
+function getLyricsFromUrl(url) {
+  try {
+    const response = http.GET(url, {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    })
+
+    if (!response.isOk) {
+      return { error: "Failed to fetch lyrics page" }
+    }
+
+    const html = response.body
+    const lyricsMatch = html.match(/<div[^>]*data-lyrics-container="true"[^>]*>([\s\S]*?)<\/div>/)
+
+    if (lyricsMatch) {
+      const lyrics = lyricsMatch[1]
+        .replace(/<br\s*\/?>/gi, "\n")
+        .replace(/<[^>]*>/g, "")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .trim()
+
+      const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/)
+      const title = titleMatch ? titleMatch[1].replace(" Lyrics | Genius", "") : "Unknown Song"
+
+      return {
+        title: title,
+        lyrics: lyrics,
+        url: url,
+      }
+    }
+
+    return { error: "Lyrics not found on page" }
+  } catch (ex) {
+    return { error: "Error parsing lyrics: " + ex.message }
+  }
+}
+
 function search(query, type, order, filters) {
   try {
     const searchUrl = `https://genius.com/api/search/multi?per_page=5&q=${encodeURIComponent(query)}`
@@ -71,50 +144,46 @@ function isContentDetailsUrl(url) {
 }
 
 function getContentDetails(url) {
-  try {
-    const response = http.GET(url, {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    })
+  const result = getLyricsFromUrl(url)
 
-    if (!response.isOk) {
-      throw new ScriptException("Failed to fetch lyrics page")
-    }
-
-    const html = response.body
-    const lyricsMatch = html.match(/<div[^>]*data-lyrics-container="true"[^>]*>([\s\S]*?)<\/div>/)
-    let lyrics = "Lyrics not found"
-
-    if (lyricsMatch) {
-      lyrics = lyricsMatch[1]
-        .replace(/<br\s*\/?>/gi, "\n")
-        .replace(/<[^>]*>/g, "")
-        .replace(/&amp;/g, "&")
-        .replace(/&lt;/g, "<")
-        .replace(/&gt;/g, ">")
-        .replace(/&quot;/g, '"')
-        .trim()
-    }
-
-    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/)
-    const title = titleMatch ? titleMatch[1].replace(" Lyrics | Genius", "") : "Unknown Song"
-
-    return new PlatformContentDetails({
-      contentType: Type.Content.Media,
-      name: title,
-      thumbnails: [],
-      author: new PlatformAuthorLink(0, "Genius", "https://genius.com", ""),
-      datetime: 0,
-      url: url,
-      isLive: false,
-      description: lyrics,
-      rating: new RatingLikes(0),
-      textType: Type.Text.Plain,
-    })
-  } catch (ex) {
-    throw new ScriptException("Failed to get lyrics: " + ex.message)
+  if (result.error) {
+    throw new ScriptException(result.error)
   }
+
+  return new PlatformContentDetails({
+    contentType: Type.Content.Media,
+    name: result.title,
+    thumbnails: [],
+    author: new PlatformAuthorLink(0, "Genius", "https://genius.com", ""),
+    datetime: 0,
+    url: url,
+    isLive: false,
+    description: result.lyrics,
+    rating: new RatingLikes(0),
+    textType: Type.Text.Plain,
+  })
 }
 
 function getComments(url) {
   return new CommentPager([], false, "")
 }
+
+// Action handler for media player integration
+function handleAction(action, context) {
+  if (action === "getLyrics" && context.currentTrack) {
+    return getLyrics(context.currentTrack.title, context.currentTrack.artist)
+  }
+  return { error: "Unsupported action or missing context" }
+}
+
+const ContentPager = {}
+const Type = {}
+const http = {}
+const SearchPager = {}
+const PlatformContent = {}
+const Thumbnail = {}
+const PlatformAuthorLink = {}
+const PlatformContentDetails = {}
+const RatingLikes = {}
+const CommentPager = {}
+const ScriptException = {}
