@@ -10,7 +10,5 @@
   "scriptUrl": "./GeniusLyricsPlugin.js",
   "packages": ["Http"],
   "allowEval": false,
-  "allowUrls": ["https://genius.com/*", "https://api.genius.com/*"],
-  "constants": {},
-  "settings": []
+  "allowUrls": ["https://genius.com/*", "https://api.genius.com/*"]
 }
