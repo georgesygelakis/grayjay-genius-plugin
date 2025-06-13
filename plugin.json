@@ -1,7 +1,7 @@
 {
   "name": "Genius Lyrics",
   "version": "1.0",
-  "sourceUrl": "https://github.com/georgesygelakis.io/grayjay-genius-plugin/plugin.json",
-  "scriptUrl": "https://github.com/georgesygelakis.io/grayjay-genius-plugin/GeniusLyricsPlugin.js",
+  "sourceUrl": "https://georgesygelakis.github.io/grayjay-genius-plugin/plugin.json",
+  "scriptUrl": "https://georgesygelakis.github.io/grayjay-genius-plugin/GeniusLyricsPlugin.js",
   "icon": "https://i.pinimg.com/originals/48/a0/9f/48a09fb46e00022a692e459b917a2848.jpg"
 }
